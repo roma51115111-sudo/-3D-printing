@@ -131,78 +131,52 @@ function updateScales(rotation) {
   for (let i = 0; i < total; i++) {
       const el = $imgs[i];
       
-      // ВАЖНО: Вычисляем позицию картинки ОТНОСИТЕЛЬНО ЦЕНТРА
-      // 1. Вычисляем угол картинки в кольце
+      // Вычисляем позицию картинки относительно центра
       let imgAngle = i * galleryAngle;
-      
-      // 2. Учитываем вращение всего кольца
       let rot = imgAngle + rotation;
       
-      // 3. Нормализуем угол от -180 до 180 (относительно центра/камеры)
+      // Нормализуем угол от -180 до 180
       rot = rot % 360;
       if (rot > 180) rot -= 360;
       if (rot < -180) rot += 360;
       
-      // 4. Используем абсолютное значение для симметрии
       const absRot = Math.abs(rot);
       
-      // УСИЛЕННЫЕ инвертированные настройки масштаба:
-      const centerScale = 0.3;      // Центр - ОЧЕНЬ МАЛЕНЬКИЙ
-      const midScale = 20;          // ~90° - ОЧЕНЬ БОЛЬШОЙ
-      const edgeScale = 0.5;        // Края - снова маленькие
+      // ============ ЦЕНТР МАЛЕНЬКИЙ, КРАЯ БОЛЬШИЕ ============
+      const centerScale = 0.2;      // Центр - 50%
+      const edgeScale = 1.5;        // Края - 150%
       
-      // Параболическое изменение масштаба
-      let scale;
-      if (absRot <= 90) {
-          // Быстрое увеличение от центра к середине
-          const t = absRot / 90;
-          // Более агрессивная кривая: центральные еще меньше
-          scale = centerScale + (midScale - centerScale) * (1 - Math.pow(1 - t, 8));
-      } else {
-          // Быстрое уменьшение от середины к краям
-          const t = (absRot - 90) / 90;
-          // Быстрое падение
-          scale = midScale + (edgeScale - midScale) * Math.pow(t, 8);
-      }
+      // Плавное увеличение от центра к краям
+      const t = absRot / 180;       // 0 в центре, 1 на краях
       
-      // Настройки глубины (z-position)
-      const baseRadius = 1000;
-      const zOffset = 400;
-      let zOffsetValue;
+      // Линейная интерполяция
+      let scale = centerScale + (edgeScale - centerScale) * t;
       
-      // Z-позиция следует за масштабом
-      if (absRot <= 90) {
-          const t = absRot / 90;
-          zOffsetValue = zOffset * (1 - Math.pow(1 - t, 8));
-      } else {
-          const t = (absRot - 90) / 90;
-          zOffsetValue = zOffset * (1 - Math.pow(t, 8));
-      }
+      // ========================================================
       
-      const z = -baseRadius + zOffsetValue;
+      // УБИРАЕМ z полностью, работаем только с scale
+      // Просто применяем scale напрямую
+      el.style.transform = el.style.transform.replace(/scale3d\([^)]*\)/, ''); // Удаляем старый scale
       
-      // Применяем плавную анимацию
+      // Применяем анимацию ТОЛЬКО для scale
       if (!el._scaleTween) {
           el._scaleTween = gsap.to(el, {
               scale: scale,
-              z: z,
               duration: 0.4,
               ease: "power2.out",
               overwrite: true,
-              transformOrigin: `50% 50% ${radius}px`,
               onComplete: () => {
                   el._scaleTween = null;
               }
           });
       } else {
           el._scaleTween.vars.scale = scale;
-          el._scaleTween.vars.z = z;
           el._scaleTween.invalidate().restart();
       }
       
-      // Blur эффект - центральная самая размытая, боковые четкие
-      const maxBlur = 3; // Увеличиваем blur для центра
-      const blurAmount = Math.min((absRot / 180) * maxBlur, maxBlur);
+      // Blur эффект
+      const maxBlur = 0;
+      const blurAmount = maxBlur * (1 - t);
       
       gsap.to(el, {
           filter: `blur(${blurAmount}px)`,
@@ -210,15 +184,6 @@ function updateScales(rotation) {
           ease: "power2.out",
           overwrite: true
       });
-      
-      // ДЕБАГ: можно выводить значения для проверки
-      if (i === 0 && Math.abs(rot) < 5) {
-          console.log("Центральная картинка:", {
-              angle: rot,
-              scale: scale,
-              absRot: absRot
-          });
-      }
   }
 }
 
@@ -364,105 +329,130 @@ window.addEventListener('beforeunload', () => {
 });
 
   // ===============================
-  // ======== СЛАЙДЕР ВИДЕО ========
-  // ===============================
-  const container = document.getElementById('compareContainer');
-  const slider = document.getElementById('slider');
-  const videoAfter = document.getElementById('videoAfter');
-  
-  if (container && slider && videoAfter) {
-  
-    let isDraggingSlider = false;
-    let autoTween = null;
-    const margin = 10;
-  
-    function setSliderPosition(x, isAuto = false) {
-      const rect = container.getBoundingClientRect();
-  
-      if (x < margin) x = margin;
-      if (x > rect.width - margin) x = rect.width - margin;
-  
-      if (isDraggingSlider && isAuto) return;
-  
-      slider.style.left = x + 'px';
-      const rightInset = Math.round(rect.width - x);
-      videoAfter.style.clipPath = `inset(0px ${rightInset}px 0px 0px)`;
-    }
-  
-    function sliderStartDrag(e) {
-      e.preventDefault();
-      isDraggingSlider = true;
-      if (autoTween) {
-        autoTween.kill();
-        autoTween = null;
-      }
-    }
-  
-    function sliderDrag(e) {
-      if (!isDraggingSlider) return;
-      let clientX = e.clientX;
-      if (e.touches) clientX = e.touches[0].clientX;
-      const rect = container.getBoundingClientRect();
-      setSliderPosition(clientX - rect.left);
-    }
-  
-    function sliderEndDrag() {
-      isDraggingSlider = false;
-    }
-  
-    // === правильная привязка ===
-    slider.addEventListener('mousedown', sliderStartDrag);
-    slider.addEventListener('touchstart', sliderStartDrag, { passive: false });
-  
-    window.addEventListener('mousemove', sliderDrag);
-    window.addEventListener('touchmove', sliderDrag, { passive: false });
-  
-    window.addEventListener('mouseup', sliderEndDrag);
-    window.addEventListener('touchend', sliderEndDrag);
-  
-    // === центруем при загрузке ===
-    function initSlider() {
-      const rect = container.getBoundingClientRect();
-      setSliderPosition(rect.width / 2);
-    }
-    initSlider();
-  
-    // === корректировка при ресайзе ===
-    window.addEventListener('resize', () => {
-      const rect = container.getBoundingClientRect();
-      const left = parseFloat(slider.style.left) || rect.width / 2;
-      setSliderPosition(Math.min(Math.max(left, margin), rect.width - margin));
-    });
-  
-    // === автоматическое движение при появлении ===
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !autoTween) {
-          const rect = container.getBoundingClientRect();
-          const center = rect.width / 2;
-  
-          autoTween = gsap.to({}, {
-            duration: 2,
-            delay: 2,
-            onUpdate: function () {
-              setSliderPosition(center - (center - margin) * this.progress(), true);
-            },
-            onComplete: () => {
-              autoTween = null;
-            }
-          });
-  
-          observer.unobserve(container);
-        }
-      });
-    }, { threshold: 0.5 });
-  
-    observer.observe(container);
-  
-  } else {
-    console.warn('Slider elements not found: compareContainer/slider/videoAfter');
+// ======== СЛАЙДЕР ВИДЕО ========
+// ===============================
+const container = document.getElementById('compareContainer');
+const slider = document.getElementById('slider');
+const videoAfter = document.getElementById('videoAfter');
+
+if (container && slider && videoAfter) {
+
+  let isDraggingSlider = false;
+  let autoTween = null;
+  const margin = 10;
+  let currentLeft = null; // храним текущую позицию
+
+  function setSliderPosition(x, isAuto = false) {
+    const rect = container.getBoundingClientRect();
+    
+    // Ограничиваем x
+    if (x < margin) x = margin;
+    if (x > rect.width - margin) x = rect.width - margin;
+    
+    // Запоминаем текущую позицию
+    currentLeft = x;
+    
+    // Применяем позицию слайдера
+    slider.style.left = x + 'px';
+    
+    // Принудительно обновляем clipPath — ВАЖНО: строгое обрезание
+    const rightInset = Math.round(rect.width - x);
+    videoAfter.style.clipPath = `inset(0px ${rightInset}px 0px 0px)`;
+    
+    // Небольшой хак для принудительного перерендера в некоторых браузерах
+    videoAfter.style.transform = 'translateZ(0)';
+    setTimeout(() => { videoAfter.style.transform = ''; }, 0);
   }
 
+  function sliderStartDrag(e) {
+    e.preventDefault();
+    isDraggingSlider = true;
+    if (autoTween) {
+      autoTween.kill();
+      autoTween = null;
+    }
+  }
+
+  function sliderDrag(e) {
+    if (!isDraggingSlider) return;
+    e.preventDefault(); // Добавляем preventDefault
+    
+    let clientX = e.clientX;
+    if (e.touches) clientX = e.touches[0].clientX;
+    const rect = container.getBoundingClientRect();
+    setSliderPosition(clientX - rect.left);
+  }
+
+  function sliderEndDrag() {
+    isDraggingSlider = false;
+  }
+
+  // === правильная привязка с passive: false для всех ===
+  slider.addEventListener('mousedown', sliderStartDrag);
+  slider.addEventListener('touchstart', sliderStartDrag, { passive: false });
+
+  window.addEventListener('mousemove', sliderDrag);
+  window.addEventListener('touchmove', sliderDrag, { passive: false });
+
+  window.addEventListener('mouseup', sliderEndDrag);
+  window.addEventListener('touchend', sliderEndDrag);
+
+  // === центруем при загрузке ===
+  function initSlider() {
+    const rect = container.getBoundingClientRect();
+    setSliderPosition(rect.width / 2);
+  }
+  initSlider();
+
+  // === корректировка при ресайзе ===
+  window.addEventListener('resize', () => {
+    const rect = container.getBoundingClientRect();
+    // Используем currentLeft если есть, иначе центр
+    const left = currentLeft !== null ? currentLeft : rect.width / 2;
+    setSliderPosition(Math.min(Math.max(left, margin), rect.width - margin));
+  });
+
+  // === автоматическое движение при появлении ===
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !autoTween) {
+        const rect = container.getBoundingClientRect();
+        const center = rect.width / 2;
+
+        autoTween = gsap.to({}, {
+          duration: 2,
+          delay: 2,
+          onUpdate: function () {
+            const progress = this.progress();
+            // От центра к краю
+            const position = center - (center - margin) * progress;
+            setSliderPosition(position, true);
+          },
+          onComplete: () => {
+            autoTween = null;
+          }
+        });
+
+        observer.unobserve(container);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  observer.observe(container);
+
+  // === ДОПОЛНИТЕЛЬНО: сброс при проблемах ===
+  // Принудительно обновляем clipPath при каждой прокрутке страницы
+  window.addEventListener('scroll', function forceClipUpdate() {
+    if (currentLeft !== null) {
+      const rect = container.getBoundingClientRect();
+      const rightInset = Math.round(rect.width - currentLeft);
+      videoAfter.style.clipPath = `inset(0px ${rightInset}px 0px 0px)`;
+    }
+  }, { passive: true });
+
+} else {
+  console.warn('Slider elements not found: compareContainer/slider/videoAfter');
+}
 
 // ===============================
 // ===== HERO 3D CAROUSEL =========
@@ -512,6 +502,14 @@ window.addEventListener('beforeunload', () => {
   let tween = null;
   let targetAngle = 0;
   
+    // ------------------
+  // AUTO ROTATION
+  // ------------------
+  let autoRotateSpeed = 0.20; // скорость вращения (чем меньше, тем медленнее)
+  let autoRotateEnabled = true;
+  let lastInteractionTime = Date.now();
+  const AUTO_ROTATE_DELAY = 3000; // пауза после взаимодействия (мс)
+
   const setRing = gsap.quickSetter(ring, "rotateY", "deg");
   
   // ------------------
@@ -588,16 +586,12 @@ window.addEventListener('beforeunload', () => {
     });
   
   }
-  
-  
-  
-  
-
   // ------------------
   // RAF LOOP
   // ------------------
   function loop() {
-    angle += (targetAngle - angle) * 0.08; // магия
+    startAutoRotation(); // ← добавьте эту строку
+    angle += (targetAngle - angle) * 0.08;
     setRing(angle);
     updateDepth();
     requestAnimationFrame(loop);
@@ -611,6 +605,26 @@ window.addEventListener('beforeunload', () => {
     return Math.round(a / step) * step;
   }
 
+    // ------------------
+  // AUTO ROTATION LOOP
+  // ------------------
+  function startAutoRotation() {
+    const now = Date.now();
+    const timeSinceLastInteraction = now - lastInteractionTime;
+    
+    if (autoRotateEnabled && timeSinceLastInteraction > AUTO_ROTATE_DELAY) {
+      targetAngle += autoRotateSpeed;
+    }
+  }
+
+  // ------------------
+  // СБРОС ТАЙМЕРА ПРИ ВЗАИМОДЕЙСТВИИ
+  // ------------------
+  function resetAutoRotationTimer() {
+    lastInteractionTime = Date.now();
+  }
+
+
   // ------------------
   // POINTER INPUT
   // ------------------
@@ -618,6 +632,7 @@ window.addEventListener('beforeunload', () => {
     if (e.button !== 0 && e.button !== 2) return;
 
     isDown = true;
+    resetAutoRotationTimer();
     lastX = e.clientX;
 
     if (tween) tween.kill();
@@ -644,6 +659,7 @@ window.addEventListener('beforeunload', () => {
 
   root.addEventListener("pointerup", e => {
     isDown = false;
+    resetAutoRotationTimer();
     root.releasePointerCapture(e.pointerId);
 
     // ---- 1) INERTIA run ----
@@ -680,7 +696,7 @@ window.addEventListener('beforeunload', () => {
   // ------------------
   root.addEventListener("wheel", e => {
     e.preventDefault();
-  
+    resetAutoRotationTimer();
     const delta = e.deltaY || e.deltaX;
     const scroll = gsap.utils.clamp(-40, 40, delta * 0.6);
   
