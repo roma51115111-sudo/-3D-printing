@@ -335,10 +335,9 @@ header.hidden {
 
 /*      ****** CREATIVE  ******      */
 
-.section-creative{
+.section-creative {
     padding-top: 194px;
     padding-bottom: 100px;
-
 }
 
 .title {
@@ -350,7 +349,7 @@ header.hidden {
     color: #000000;
 }
 
-.creative-block{
+.creative-block {
     width: 825px;
     height: 487px;
     background-color: #F3F3F3;
@@ -361,9 +360,14 @@ header.hidden {
     gap: 20px;
     padding-top: 26px;
     padding-left: 26px;
-    
 }
-.creative-wrap{
+
+.creative-block.wide {
+    width: 100%; /* или конкретное значение, например 1200px */
+    max-width: 100%; /* если нужно ограничить */
+}
+
+.creative-wrap {
     display: flex;
     flex-wrap: wrap;
     gap: 30px;
@@ -510,12 +514,12 @@ body {
 /* Первый блок "Surfaces" */
 .can-block {
     width: 825px;
-    min-height: 520px; /* фиксируем минимальную высоту */
-    background-color: #F3F3F3;
+    min-height: 520px;
     padding: 26px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    background-color: transparent; /* убран серый фон */
 }
 
 /* Заголовки и текст */
@@ -544,7 +548,7 @@ body {
 /* ===== Видеосравнение (Before/After) ===== */
 .compare-wrapper {
     width: 100%;
-    height: 380px; /* Можно регулировать по макету */
+    height: 420px; /* Можно регулировать по макету */
     margin-top: 20px;
     position: relative;
     background-color: #F3F3F3;
@@ -711,7 +715,11 @@ body {
     transition: opacity 0.6s ease;
     pointer-events: none;
 }
-
+/* УМЕНЬШЕНИЕ КАРТОЧЕК КАРУСЕЛИ */
+.hero-carousel__card {
+    width: 240px !important;  /* 300px * 0.8 = 240px (минус 20%) */
+    height: 336px !important; /* 420px * 0.8 = 336px */
+}
 
 /*      ****** HOW WE WORK  ******      */
 
