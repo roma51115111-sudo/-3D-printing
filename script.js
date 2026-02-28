@@ -58,7 +58,60 @@ document.addEventListener("DOMContentLoaded", function () {
       header.classList.remove('scrolled');
     }
   });
-
+//код кнопки:
+document.addEventListener('DOMContentLoaded', function() {
+  // Получаем элементы
+  const moodToggle = document.getElementById('housingMoodToggle');
+  const housingBlock = document.querySelector('.creative-block.wide');
+  
+  // Проверяем, что элементы существуют
+  if (moodToggle && housingBlock) {
+      const toggleText = moodToggle.querySelector('.toggle-text');
+      
+      // Загружаем сохраненное состояние
+      const savedMode = localStorage.getItem('housingMood');
+      if (savedMode === 'night') {
+          housingBlock.classList.add('night-mode');
+          moodToggle.classList.add('night-mode');
+          if (toggleText) toggleText.textContent = 'Night mode';
+      }
+      
+      // Обработчик клика
+      moodToggle.addEventListener('click', function(e) {
+          e.preventDefault(); // Предотвращаем возможное всплытие события
+          
+          // Переключаем классы
+          this.classList.toggle('night-mode');
+          housingBlock.classList.toggle('night-mode');
+          
+          // Обновляем текст и сохраняем состояние
+          if (toggleText) {
+              if (this.classList.contains('night-mode')) {
+                  toggleText.textContent = 'Night mode';
+                  localStorage.setItem('housingMood', 'night');
+                  
+                  // Анимация при переключении на ночной режим
+                  this.style.transform = 'scale(0.95)';
+                  setTimeout(() => {
+                      this.style.transform = '';
+                  }, 200);
+              } else {
+                  toggleText.textContent = 'Day mode';
+                  localStorage.setItem('housingMood', 'day');
+              }
+          }
+          
+          console.log('Mode toggled:', this.classList.contains('night-mode') ? 'night' : 'day'); // Для отладки
+      });
+      
+      // Убираем начальную анимацию
+      setTimeout(() => {
+          moodToggle.style.animation = 'none';
+      }, 1000);
+  } else {
+      console.error('Elements not found!'); // Для отладки
+  }
+});
 // ===============================
 // ======== КОД ГАЛЕРЕЇ ==========
 // ===============================
